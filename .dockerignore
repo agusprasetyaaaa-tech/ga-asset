@@ -7,4 +7,3 @@ storage/*.key
 tests
 Dockerfile
 compose.yaml
-docker

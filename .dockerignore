@@ -1,0 +1,10 @@
+node_modules
+vendor
+.git
+.env
+public/build
+storage/*.key
+tests
+Dockerfile
+compose.yaml
+docker

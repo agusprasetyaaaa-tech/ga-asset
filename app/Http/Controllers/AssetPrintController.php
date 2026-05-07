@@ -5,15 +5,23 @@ namespace App\Http\Controllers;
 use App\Models\Asset;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class AssetPrintController extends Controller
+class AssetPrintController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('can:view assets'),
+        ];
+    }
     /**
      * Display the asset selection page for printing barcodes.
      */
     public function index(Request $request)
     {
-        $query = Asset::with(['subcategory', 'location']);
+        $query = Asset::with(['subcategory.category', 'location', 'department_rel']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -38,14 +46,20 @@ class AssetPrintController extends Controller
             $query->where('department_id', $request->department_id);
         }
 
-        $assets = $query->latest()->paginate(20)->withQueryString();
+        $sortField = 'created_at';
+        $sortDir = $request->dir === 'asc' ? 'asc' : 'desc';
+
+        $perPage = $request->per_page === 'all' ? $query->count() : (int) ($request->per_page ?? 10);
+        if ($perPage <= 0) $perPage = 10;
+
+        $assets = $query->orderBy($sortField, $sortDir)->paginate($perPage)->withQueryString();
 
         return Inertia::render('Assets/PrintSelect', [
             'assets' => $assets,
             'categories' => \App\Models\Category::all(),
             'subcategories' => \App\Models\Subcategory::all(),
             'departments' => \App\Models\Department::all(),
-            'filters' => $request->only(['search', 'subcategory_id', 'category_id', 'department_id']),
+            'filters' => $request->only(['search', 'subcategory_id', 'category_id', 'department_id', 'per_page', 'dir']),
         ]);
     }
 

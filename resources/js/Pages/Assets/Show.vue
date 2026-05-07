@@ -7,6 +7,9 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import StatusBadge from '@/Components/Inventory/StatusBadge.vue';
 import QrCodeDisplay from '@/Components/Inventory/QrCodeDisplay.vue';
 import AssetFormModal from '@/Components/Inventory/AssetFormModal.vue';
+import DepreciationChart from '@/Components/Inventory/DepreciationChart.vue';
+import LoanFormModal from '@/Components/Inventory/LoanFormModal.vue';
+import LoanReturnModal from '@/Components/Inventory/LoanReturnModal.vue';
 import MovementFormModal from '@/Components/Inventory/MovementFormModal.vue';
 import MaintenanceFormModal from '@/Components/Inventory/MaintenanceFormModal.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
@@ -24,6 +27,8 @@ const props = defineProps({
 const showEditModal = ref(false);
 const showMovementModal = ref(false);
 const showMaintenanceModal = ref(false);
+const showLoanModal = ref(false);
+const showReturnModal = ref(false);
 
 const activeTab = ref('movements');
 
@@ -84,16 +89,18 @@ const conditionColor = (c) => {
 
     <AuthenticatedLayout>
         <template #header>
-            <div class="flex items-center gap-4">
-                <Link :href="route('assets.index')"
-                    class="h-9 w-9 flex items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 transition-colors">
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                </Link>
-                <div>
-                    <h2 class="text-xl font-bold text-gray-900 leading-tight">Detail Asset</h2>
-                    <p class="text-xs text-gray-400 font-mono font-medium">{{ asset.asset_code || asset.barcode_code }}</p>
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <Link :href="route('assets.index')"
+                        class="h-9 w-9 flex items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 transition-colors">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </Link>
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900 leading-tight">Detail Aset</h2>
+                        <p class="text-xs text-gray-500 mt-1 font-mono">{{ asset.asset_code || asset.barcode_code }}</p>
+                    </div>
                 </div>
             </div>
         </template>
@@ -105,6 +112,29 @@ const conditionColor = (c) => {
                     
                     <!-- Main Content -->
                     <div class="lg:col-span-8 space-y-6">
+
+                        <!-- Active Loan Info Alert -->
+                        <div v-if="asset.status === 'borrowed' && asset.loans?.length > 0 && asset.loans[0].status === 'borrowed'" 
+                            class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-xl">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <h3 class="text-sm font-bold text-blue-800 uppercase tracking-tight">Sedang Dipinjam</h3>
+                                    <div class="mt-1 text-xs text-blue-700">
+                                        Oleh <span class="font-bold underline">{{ asset.loans[0].borrower_name }}</span> 
+                                        ({{ asset.loans[0].borrower_department || '-' }}) 
+                                        sejak {{ formatDateShort(asset.loans[0].loan_date) }}.
+                                        <span v-if="asset.loans[0].expected_return_date" class="block mt-1 font-semibold">
+                                            Estimasi Kembali: {{ formatDateShort(asset.loans[0].expected_return_date) }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- Asset Info Card -->
                         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8">
@@ -137,6 +167,14 @@ const conditionColor = (c) => {
                                 </div>
                                 
                                 <div class="flex items-center gap-2">
+                                    <button v-if="asset.status === 'available'" @click="showLoanModal = true"
+                                        class="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors shadow-sm">
+                                        Pinjam Aset
+                                    </button>
+                                    <button v-if="asset.status === 'borrowed'" @click="showReturnModal = true"
+                                        class="px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-bold hover:bg-rose-700 transition-colors shadow-sm">
+                                        Kembalikan Aset
+                                    </button>
                                     <button @click="showEditModal = true"
                                         class="px-4 py-2 border border-gray-300 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors">
                                         Edit
@@ -152,11 +190,11 @@ const conditionColor = (c) => {
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4 border-t border-gray-100 pt-6">
                                 <div class="flex flex-col">
                                     <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Kode Asset</span>
-                                    <span class="text-sm font-bold text-gray-900 font-mono">{{ asset.asset_code || asset.barcode_code }}</span>
+                                    <span class="text-sm font-bold text-emerald-700 font-mono">{{ asset.asset_code || asset.barcode_code }}</span>
                                 </div>
                                 <div class="flex flex-col">
                                     <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Serial Number</span>
-                                    <span class="text-sm font-bold text-gray-900">{{ asset.serial_number }}</span>
+                                    <span class="text-[11px] font-bold text-gray-900 font-mono italic">{{ asset.serial_number || '-' }}</span>
                                 </div>
                                 <div class="flex flex-col">
                                     <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Kategori</span>
@@ -172,7 +210,7 @@ const conditionColor = (c) => {
                                 </div>
                                 <div class="flex flex-col">
                                     <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Departemen</span>
-                                    <span class="text-sm font-semibold text-gray-900">{{ asset.department || '-' }}</span>
+                                    <span class="text-sm font-semibold text-gray-900">{{ asset.department_rel?.name || asset.department || '-' }}</span>
                                 </div>
                                 <div class="flex flex-col">
                                     <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Pengguna / PIC</span>
@@ -204,8 +242,28 @@ const conditionColor = (c) => {
                                 <div class="p-4 bg-gray-50 rounded-lg text-sm text-gray-700 border border-gray-100 whitespace-pre-line">{{ asset.description }}</div>
                             </div>
 
+                            <!-- Depreciation Chart -->
+                            <div v-if="asset.useful_life > 0" class="mt-8 pt-6 border-t border-gray-100">
+                                <div class="flex items-center justify-between mb-4">
+                                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Visualisasi Penyusutan (Straight-Line)</span>
+                                    <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">Proyeksi {{ asset.useful_life }} Tahun</span>
+                                </div>
+                                <div class="bg-white p-2 rounded-xl border border-gray-100">
+                                    <DepreciationChart 
+                                        :purchase-price="asset.purchase_price"
+                                        :salvage-value="asset.salvage_value"
+                                        :useful-life="asset.useful_life"
+                                        :purchase-date="asset.purchase_date"
+                                        :current-book-value="asset.current_book_value"
+                                    />
+                                </div>
+                                <p class="text-[9px] text-gray-400 mt-3 text-center italic">
+                                    Grafik menunjukkan penurunan nilai aset dari harga beli ke nilai residu selama umur ekonomis.
+                                </p>
+                            </div>
+
                             <!-- Procurement Info -->
-                            <div v-if="asset.vendor || asset.warranty_date || asset.usage_period || asset.notes" class="mt-6 pt-4 border-t border-gray-100">
+                            <div v-if="asset.vendor || asset.warranty_date || asset.notes" class="mt-6 pt-4 border-t border-gray-100">
                                 <span class="text-xs font-bold text-gray-800 uppercase tracking-widest block mb-4">Informasi Pembelian (Procurement)</span>
                                 <div class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4">
                                     <div class="flex flex-col">
@@ -215,10 +273,6 @@ const conditionColor = (c) => {
                                     <div class="flex flex-col">
                                         <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Garansi Berakhir</span>
                                         <span class="text-sm font-semibold text-gray-900">{{ asset.warranty_date ? formatDateShort(asset.warranty_date) : '-' }}</span>
-                                    </div>
-                                    <div class="flex flex-col">
-                                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Masa Pemakaian</span>
-                                        <span class="text-sm font-semibold text-gray-900">{{ asset.usage_period || '-' }}</span>
                                     </div>
                                 </div>
                                 <div v-if="asset.notes" class="mt-4">
@@ -235,6 +289,11 @@ const conditionColor = (c) => {
                                     :class="activeTab === 'movements' ? 'border-emerald-600 text-emerald-600 font-bold' : 'border-transparent text-gray-400 hover:text-gray-600 font-medium'"
                                     class="px-6 py-4 text-sm border-b-2 transition-all">
                                     Riwayat Perpindahan
+                                </button>
+                                <button @click="activeTab = 'loans'"
+                                    :class="activeTab === 'loans' ? 'border-emerald-600 text-emerald-600 font-bold' : 'border-transparent text-gray-400 hover:text-gray-600 font-medium'"
+                                    class="px-6 py-4 text-sm border-b-2 transition-all">
+                                    Riwayat Pinjam
                                 </button>
                                 <button @click="activeTab = 'maintenance'"
                                     :class="activeTab === 'maintenance' ? 'border-emerald-600 text-emerald-600 font-bold' : 'border-transparent text-gray-400 hover:text-gray-600 font-medium'"
@@ -255,7 +314,7 @@ const conditionColor = (c) => {
                     <div class="flex items-center gap-2 text-sm">
                         <span class="font-bold text-gray-500">{{ movement.from_location?.name || 'Start' }}</span>
                         <svg class="h-3 w-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                        <span class="font-bold text-gray-900">{{ movement.to_location?.name || 'N/A' }}</span>
+                        <span class="font-bold text-gray-900">{{ movement.to_location?.name || movement.user?.name || 'N/A' }}</span>
                     </div>
                     <!-- Holder Handoff -->
                     <div v-if="movement.from_holder || movement.to_holder" class="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold">
@@ -270,6 +329,37 @@ const conditionColor = (c) => {
         </div>
                                     </div>
                                     <p v-else class="text-sm text-gray-400 text-center py-4">Belum ada riwayat perpindahan.</p>
+                                </div>
+
+                                <!-- Loans -->
+                                <div v-if="activeTab === 'loans'">
+                                    <div v-if="asset.loans?.length" class="space-y-4">
+                                        <div v-for="loan in asset.loans" :key="loan.id" class="p-4 bg-gray-50 border border-gray-100 rounded-lg">
+                                            <div class="flex justify-between items-start mb-2">
+                                                <div class="flex flex-col">
+                                                    <span class="text-xs font-bold text-gray-900">{{ loan.borrower_name }}</span>
+                                                    <span class="text-[9px] text-gray-500 uppercase">{{ loan.borrower_department || '-' }}</span>
+                                                </div>
+                                                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full border"
+                                                    :class="loan.status === 'returned' ? 'text-emerald-600 bg-emerald-50 border-emerald-100' : 'text-blue-600 bg-blue-50 border-blue-100'">
+                                                    {{ loan.status === 'returned' ? 'SUDAH KEMBALI' : 'DIPINJAM' }}
+                                                </span>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-gray-200/50">
+                                                <div>
+                                                    <span class="text-[8px] font-bold text-gray-400 uppercase block">Dipinjam</span>
+                                                    <span class="text-[10px] text-gray-700 font-semibold">{{ formatDateShort(loan.loan_date) }}</span>
+                                                </div>
+                                                <div>
+                                                    <span class="text-[8px] font-bold text-gray-400 uppercase block">Kembali</span>
+                                                    <span class="text-[10px] text-gray-700 font-semibold">{{ loan.actual_return_date ? formatDateShort(loan.actual_return_date) : '-' }}</span>
+                                                </div>
+                                            </div>
+                                            <p v-if="loan.notes && loan.status === 'borrowed'" class="text-[9px] text-gray-500 italic mt-2 italic">"{{ loan.notes }}"</p>
+                                            <p v-if="loan.return_notes && loan.status === 'returned'" class="text-[9px] text-emerald-600 italic mt-2">"{{ loan.return_notes }}"</p>
+                                        </div>
+                                    </div>
+                                    <p v-else class="text-sm text-gray-400 text-center py-4">Belum ada riwayat peminjaman.</p>
                                 </div>
 
                                 <!-- Maintenance -->
@@ -312,16 +402,56 @@ const conditionColor = (c) => {
                             </div>
                         </div>
 
+                        <!-- Asset Value & Depreciation Card -->
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <h4 class="text-sm font-bold text-gray-900 mb-6">Nilai & Penyusutan</h4>
+                            
+                            <div class="space-y-4">
+                                <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                                    <span class="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block mb-1">Nilai Buku Saat Ini</span>
+                                    <div class="text-xl font-black text-emerald-700 font-mono">
+                                        {{ formatCurrency(asset.current_book_value) }}
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 gap-3">
+                                    <div class="flex justify-between items-center text-[11px]">
+                                        <span class="text-gray-400 font-bold uppercase">Harga Beli</span>
+                                        <span class="text-gray-700 font-bold">{{ formatCurrency(asset.purchase_price) }}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-[11px]">
+                                        <span class="text-gray-400 font-bold uppercase">Nilai Residu</span>
+                                        <span class="text-gray-700 font-bold">{{ formatCurrency(asset.salvage_value) }}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-[11px]">
+                                        <span class="text-gray-400 font-bold uppercase">Umur Ekonomis</span>
+                                        <span class="text-gray-700 font-bold">{{ asset.useful_life || 0 }} Tahun</span>
+                                    </div>
+                                    <div class="h-[1px] bg-gray-100 my-1"></div>
+                                    <div class="flex justify-between items-center text-[11px]">
+                                        <span class="text-gray-400 font-bold uppercase">Akumulasi Penyusutan</span>
+                                        <span class="text-rose-600 font-bold">{{ formatCurrency(asset.purchase_price - asset.current_book_value) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-6 pt-4 border-t border-gray-100">
+                                <p class="text-[10px] text-gray-400 leading-relaxed italic">
+                                    * Perhitungan menggunakan metode Garis Lurus (Straight-Line) berdasarkan tanggal pembelian dan umur ekonomis.
+                                </p>
+                            </div>
+                        </div>
+
                         <!-- Asset Age Card -->
-                        <div class="bg-emerald-600 rounded-xl p-6 text-white shadow-sm">
-                            <span class="text-[10px] font-bold uppercase tracking-widest opacity-70">Usia Asset</span>
+                        <div class="bg-gray-900 rounded-xl p-6 text-white shadow-sm">
+                            <span class="text-[10px] font-bold uppercase tracking-widest opacity-70">Usia Record</span>
                             <div class="mt-2 flex items-baseline gap-2">
                                 <span class="text-4xl font-bold">
                                     {{ Math.floor((new Date() - new Date(asset.created_at)) / (1000 * 60 * 60 * 24)) }}
                                 </span>
                                 <span class="text-xs font-medium opacity-80">Hari tercatat</span>
                             </div>
-                            <p class="text-xs mt-4 opacity-70 leading-relaxed">Asset pertama kali didaftarkan pada {{ formatDate(asset.created_at) }}.</p>
+                            <p class="text-xs mt-4 opacity-70 leading-relaxed">Asset pertama kali didaftarkan pada {{ formatDateShort(asset.created_at) }}.</p>
                         </div>
                     </div>
                 </div>
@@ -332,5 +462,7 @@ const conditionColor = (c) => {
         <AssetFormModal :show="showEditModal" :asset="asset" :locations="locations" :categories="categories" :subcategories="subcategories" :departments="departments" :vendors="vendors" @close="showEditModal = false" />
         <MovementFormModal :show="showMovementModal" :asset="asset" :locations="locations" @close="showMovementModal = false" />
         <MaintenanceFormModal :show="showMaintenanceModal" :asset="asset" @close="showMaintenanceModal = false" />
+        <LoanFormModal :show="showLoanModal" :asset="asset" @close="showLoanModal = false" />
+        <LoanReturnModal :show="showReturnModal" :loan="asset.loans?.length > 0 ? asset.loans[0] : null" @close="showReturnModal = false" />
     </AuthenticatedLayout>
 </template>

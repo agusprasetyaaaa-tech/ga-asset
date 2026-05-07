@@ -5,18 +5,47 @@ namespace App\Http\Controllers;
 use App\Models\Department;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class DepartmentController extends Controller
+class DepartmentController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('can:view database', only: ['index']),
+            new Middleware('can:create database', only: ['store']),
+            new Middleware('can:edit database', only: ['update']),
+            new Middleware('can:delete database', only: ['destroy', 'bulkDelete']),
+        ];
+    }
     /**
      * Display a listing of departments.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $departments = Department::orderBy('name')->get();
+        $perPage = $request->input('per_page', 10);
+        $limit = $perPage === 'all' ? 9999 : $perPage;
+
+        // Note: Department model might not have assets relationship in all projects, but assuming it matches Location
+        $query = Department::withCount('assets');
+        
+        if ($request->filled('search')) {
+            $query->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhere('code', 'like', '%' . $request->search . '%')
+                  ->orWhere('description', 'like', '%' . $request->search . '%');
+        }
+
+        $sortCol = $request->input('sort', 'name');
+        $sortDir = $request->input('dir', 'asc');
+
+        $departments = $query->orderBy($sortCol, $sortDir)
+            ->paginate($limit)
+            ->withQueryString();
 
         return Inertia::render('Departments/Index', [
-            'departments' => $departments,
+            'departments' => fn() => $departments,
+            'filters' => $request->only(['search', 'per_page', 'sort', 'dir']),
         ]);
     }
 
@@ -68,5 +97,18 @@ class DepartmentController extends Controller
 
         return redirect()->route('departments.index')
             ->with('success', 'Departemen berhasil dihapus.');
+    }
+
+    /**
+     * Remove multiple departments.
+     */
+    public function bulkDelete(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        if (empty($ids)) return back();
+
+        Department::whereIn('id', $ids)->delete();
+
+        return back()->with('success', count($ids) . ' Departemen berhasil dihapus secara massal.');
     }
 }

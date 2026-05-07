@@ -5,8 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\Asset;
 use Illuminate\Http\Request;
 
-class AssetCodePreviewController extends Controller
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+
+class AssetCodePreviewController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('can:view assets'),
+        ];
+    }
+
     /**
      * Get a suggested asset code based on subcategory and department.
      */

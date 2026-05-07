@@ -19,7 +19,18 @@ const user = usePage().props.auth.user;
 const form = useForm({
     name: user.name,
     email: user.email,
+    profile_photo: null,
 });
+
+const submit = () => {
+    form.post(route('profile.update'), {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => {
+            form.profile_photo = null;
+        }
+    });
+};
 </script>
 
 <template>
@@ -34,10 +45,43 @@ const form = useForm({
             </p>
         </header>
 
+        <!-- Success Message -->
+        <div v-if="$page.props.flash.success" class="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3 animate-fadeIn">
+            <div class="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-lg">✓</div>
+            <div>
+                <p class="text-xs font-bold text-emerald-800">{{ $page.props.flash.success }}</p>
+            </div>
+        </div>
+
         <form
-            @submit.prevent="form.patch(route('profile.update'))"
+            @submit.prevent="submit"
             class="mt-6 space-y-6"
         >
+            <!-- Profile Photo -->
+            <div>
+                <InputLabel for="photo" value="Profile Photo" />
+                <div class="mt-2 flex items-center gap-4">
+                    <img :src="user.profile_photo_url" class="h-16 w-16 rounded-full object-cover border border-gray-200" />
+                    <input
+                        type="file"
+                        id="photo"
+                        class="hidden"
+                        ref="photoInput"
+                        @input="form.profile_photo = $event.target.files[0]"
+                    />
+                    <button
+                        type="button"
+                        @click="$refs.photoInput.click()"
+                        class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 transition shadow-sm"
+                    >
+                        Choose New Photo
+                    </button>
+                    <span v-if="form.profile_photo" class="text-[10px] text-emerald-600 font-bold italic animate-pulse">
+                        Ready to save: {{ form.profile_photo.name }}
+                    </span>
+                </div>
+                <InputError class="mt-2" :message="form.errors.profile_photo" />
+            </div>
             <div>
                 <InputLabel for="name" value="Name" />
 

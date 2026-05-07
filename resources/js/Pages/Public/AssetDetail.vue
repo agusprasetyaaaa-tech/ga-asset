@@ -52,6 +52,7 @@ const getStatusBadge = (status) => {
     const badges = {
         'available': { text: 'Tersedia', class: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
         'in_use': { text: 'Digunakan', class: 'bg-blue-100 text-blue-700 border-blue-200' },
+        'borrowed': { text: 'Dipinjam', class: 'bg-indigo-100 text-indigo-700 border-indigo-200' },
         'maintenance': { text: 'Perbaikan', class: 'bg-amber-100 text-amber-700 border-amber-200' },
         'damaged': { text: 'Rusak', class: 'bg-rose-100 text-rose-700 border-rose-200' }
     };
@@ -126,11 +127,11 @@ const conditionColor = (condition) => {
                     <div class="grid grid-cols-2 gap-4 border-t border-gray-100 pt-6">
                         <div class="flex flex-col">
                             <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1 font-mono">Kode Asset</span>
-                            <span class="text-xs font-bold text-gray-900 bg-gray-50 px-3 py-2 rounded-xl border border-gray-100">{{ asset.asset_code || asset.barcode_code }}</span>
+                            <span class="text-xs font-mono font-bold text-emerald-700 bg-gray-50 px-3 py-2 rounded-xl border border-gray-100">{{ asset.asset_code || asset.barcode_code }}</span>
                         </div>
                         <div class="flex flex-col">
                             <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1 font-mono">Serial Number</span>
-                            <span class="text-xs font-bold text-gray-900 bg-gray-50 px-3 py-2 rounded-xl border border-gray-100">{{ asset.serial_number || '-' }}</span>
+                            <span class="text-[11px] font-bold text-gray-900 bg-gray-50 px-3 py-2 rounded-xl border border-gray-100 font-mono italic">SN: {{ asset.serial_number || '-' }}</span>
                         </div>
                         <div class="flex flex-col">
                             <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1 font-mono">Departemen</span>
@@ -201,10 +202,6 @@ const conditionColor = (condition) => {
                         <span class="text-xs font-bold text-gray-900">{{ asset.warranty_date ? formatDateShort(asset.warranty_date) : '-' }}</span>
                     </div>
                     <div class="flex flex-col">
-                        <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Masa Pemakaian</span>
-                        <span class="text-xs font-bold text-gray-900">{{ asset.usage_period || '-' }}</span>
-                    </div>
-                    <div class="flex flex-col">
                         <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Harga Pembelian</span>
                         <span class="text-xs font-bold text-emerald-600 font-mono">{{ formatCurrency(asset.purchase_price) }}</span>
                     </div>
@@ -241,7 +238,7 @@ const conditionColor = (condition) => {
                                 </div>
                                 <div>
                                     <div class="flex items-center gap-2 mb-1 flex-wrap">
-                                        <span class="text-xs font-black text-gray-900 uppercase tracking-tight">{{ movement.to_location?.name || 'N/A' }}</span>
+                                        <span class="text-xs font-black text-gray-900 uppercase tracking-tight">{{ movement.to_location?.name || movement.user?.name || 'N/A' }}</span>
                                         <span class="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full font-bold">{{ movement.to_holder || 'Sistem' }}</span>
                                     </div>
                                     <div class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">{{ formatDate(movement.created_at) }}</div>

@@ -22,6 +22,7 @@ const emit = defineEmits(['close']);
 const isEditing = ref(false);
 const selectedCategoryId = ref('');
 const photoPreview = ref(null);
+const codeMode = ref('auto'); // 'auto' or 'manual'
 
 const form = useForm({
     asset_code: '',
@@ -45,6 +46,11 @@ const form = useForm({
     vendor: '',
     warranty_date: '',
     usage_period: '',
+    salvage_value: '',
+    useful_life: '',
+    license_key: '',
+    license_type: 'none',
+    license_expiration_date: '',
     notes: '',
     asset_owner: 'PT. Interprima Indocom',
 });
@@ -53,29 +59,46 @@ const form = useForm({
 const isCheckingCode = ref(false);
 const codeIsDuplicate = ref(false);
 
-watch([() => form.subcategory_id, () => form.department_id, () => form.department, () => form.purchase_date], async ([newSub, newDeptId, newDept, newDate]) => {
-    // We trigger generation if Subcategory is selected. 
-    // Dept can be empty (defaults to 'DEPT') and Date defaults to today.
-    if (!isEditing.value && newSub) {
-        try {
-            const response = await fetch(route('assets.generate-code'), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-                },
-                body: JSON.stringify({ 
-                    subcategory_id: newSub, 
-                    department_id: newDeptId || '',
-                    department: newDept || '',
-                    purchase_date: newDate || new Date().toISOString().split('T')[0]
-                })
-            });
-            const data = await response.json();
-            if (data.code) {
-                form.asset_code = data.code;
-            }
-        } catch (e) { console.error(e); }
+const generateCode = async () => {
+    if (codeMode.value !== 'auto') return;
+    const newSub = form.subcategory_id;
+    const newDeptId = form.department_id;
+    const newDept = form.department;
+    const newDate = form.purchase_date;
+    if (!newSub) return;
+    try {
+        const response = await fetch(route('assets.generate-code'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+            },
+            body: JSON.stringify({ 
+                subcategory_id: newSub, 
+                department_id: newDeptId || '',
+                department: newDept || '',
+                purchase_date: newDate || new Date().toISOString().split('T')[0]
+            })
+        });
+        const data = await response.json();
+        if (data.code) {
+            form.asset_code = data.code;
+        }
+    } catch (e) { console.error(e); }
+};
+
+watch([() => form.subcategory_id, () => form.department_id, () => form.department, () => form.purchase_date], () => {
+    if (!isEditing.value && codeMode.value === 'auto') {
+        generateCode();
+    }
+});
+
+// When switching mode to auto, re-generate; when switching to manual, clear for user input
+watch(codeMode, (newMode) => {
+    if (newMode === 'auto' && !isEditing.value) {
+        generateCode();
+    } else if (newMode === 'manual') {
+        form.asset_code = '';
     }
 });
 
@@ -138,6 +161,11 @@ watch(() => props.show, (val) => {
         form.vendor = props.asset.vendor || '';
         form.warranty_date = props.asset.warranty_date ? props.asset.warranty_date.split('T')[0] : '';
         form.usage_period = props.asset.usage_period || '';
+        form.salvage_value = props.asset.salvage_value || '';
+        form.useful_life = props.asset.useful_life || '';
+        form.license_key = props.asset.license_key || '';
+        form.license_type = props.asset.license_type || 'none';
+        form.license_expiration_date = props.asset.license_expiration_date ? props.asset.license_expiration_date.split('T')[0] : '';
         form.notes = props.asset.notes || '';
         form.asset_owner = props.asset.asset_owner || '';
 
@@ -151,6 +179,7 @@ watch(() => props.show, (val) => {
         isEditing.value = false;
         selectedCategoryId.value = '';
         photoPreview.value = null;
+        codeMode.value = 'auto';
         form.reset();
     }
 });
@@ -197,6 +226,66 @@ const close = () => {
 
 const inputClass = 'w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition placeholder:text-gray-400';
 const labelClass = 'block text-[10px] font-bold text-gray-500 mb-1.5';
+
+// Currency formatting for Harga Pembelian
+const priceDisplay = ref('');
+
+const formatRupiah = (value) => {
+    if (!value && value !== 0) return '';
+    const num = typeof value === 'string' ? parseFloat(value.replace(/\./g, '').replace(',', '.')) : value;
+    if (isNaN(num)) return '';
+    return num.toLocaleString('id-ID');
+};
+
+const onPriceInput = (e) => {
+    // Strip non-numeric chars except dots (thousand sep in id-ID)
+    let raw = e.target.value.replace(/[^0-9]/g, '');
+    let num = parseInt(raw, 10);
+    if (isNaN(num)) {
+        priceDisplay.value = '';
+        form.purchase_price = '';
+        return;
+    }
+    form.purchase_price = num;
+    priceDisplay.value = num.toLocaleString('id-ID');
+};
+
+// Currency formatting for Nilai Residu
+const salvageDisplay = ref('');
+
+const onSalvageInput = (e) => {
+    let raw = e.target.value.replace(/[^0-9]/g, '');
+    let num = parseInt(raw, 10);
+    if (isNaN(num)) {
+        salvageDisplay.value = '';
+        form.salvage_value = '';
+        return;
+    }
+    form.salvage_value = num;
+    salvageDisplay.value = num.toLocaleString('id-ID');
+};
+
+watch(() => form.purchase_price, (val) => {
+    if (val !== '' && val !== null && val !== undefined) {
+        const num = typeof val === 'string' ? parseFloat(val) : val;
+        if (!isNaN(num) && priceDisplay.value !== num.toLocaleString('id-ID')) {
+            priceDisplay.value = num.toLocaleString('id-ID');
+        }
+    } else {
+        priceDisplay.value = '';
+    }
+}, { immediate: true });
+
+watch(() => form.salvage_value, (val) => {
+    if (val !== '' && val !== null && val !== undefined) {
+        const num = typeof val === 'string' ? parseFloat(val) : val;
+        if (!isNaN(num) && salvageDisplay.value !== num.toLocaleString('id-ID')) {
+            salvageDisplay.value = num.toLocaleString('id-ID');
+        }
+    } else {
+        salvageDisplay.value = '';
+    }
+}, { immediate: true });
 </script>
 
 <template>
@@ -223,7 +312,7 @@ const labelClass = 'block text-[10px] font-bold text-gray-500 mb-1.5';
                                 Kode: {{ asset.asset_code }}
                             </p>
                             <p v-if="!isEditing" class="text-xs text-emerald-50 mt-0.5 opacity-90">
-                                Kode Asset akan di-generate otomatis
+                                {{ codeMode === 'auto' ? 'Kode Asset di-generate otomatis' : 'Mode input kode manual' }}
                             </p>
                         </div>
                         <button @click="close" class="rounded-lg p-1.5 text-white hover:bg-emerald-500 transition-colors">
@@ -241,14 +330,37 @@ const labelClass = 'block text-[10px] font-bold text-gray-500 mb-1.5';
                                 Informasi Aset
                             </h4>
 
-                             <!-- Kode Asset -->
+                             <!-- Kode Asset with Toggle -->
                             <div class="mb-4">
-                                <label :class="labelClass" class="flex items-center justify-between">
-                                    <span>Kode Asset / ID Asset *</span>
-                                    <span v-if="!isEditing" class="text-[9px] bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded leading-none">Auto-generate</span>
-                                </label>
-                                <input v-model="form.asset_code" type="text" required :class="[inputClass, codeIsDuplicate ? 'border-red-500 ring-1 ring-red-500' : '']"
-                                    placeholder="Akan terisi otomatis saat memilih subkategori & dept" />
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <label :class="labelClass" class="!mb-0">Kode Asset / ID Asset *</label>
+                                    <div v-if="!isEditing" class="flex items-center bg-gray-100 rounded-lg p-0.5">
+                                        <button type="button" @click="codeMode = 'auto'"
+                                            class="text-[9px] font-bold px-2.5 py-1 rounded-md transition-all duration-200"
+                                            :class="codeMode === 'auto'
+                                                ? 'bg-emerald-600 text-white shadow-sm'
+                                                : 'text-gray-500 hover:text-gray-700'">
+                                            Otomatis
+                                        </button>
+                                        <button type="button" @click="codeMode = 'manual'"
+                                            class="text-[9px] font-bold px-2.5 py-1 rounded-md transition-all duration-200"
+                                            :class="codeMode === 'manual'
+                                                ? 'bg-blue-600 text-white shadow-sm'
+                                                : 'text-gray-500 hover:text-gray-700'">
+                                            Manual
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="relative">
+                                    <input v-model="form.asset_code" type="text" required
+                                        :class="[inputClass, codeIsDuplicate ? 'border-red-500 ring-1 ring-red-500' : '', codeMode === 'auto' && !isEditing ? 'bg-gray-50 pr-24' : '']"
+                                        :readonly="codeMode === 'auto' && !isEditing"
+                                        :placeholder="codeMode === 'auto' ? 'Terisi otomatis saat memilih subkategori & dept' : 'Masukkan kode asset manual, contoh: INV-2026-001'" />
+                                    <span v-if="codeMode === 'auto' && !isEditing && form.asset_code"
+                                        class="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-md font-bold select-none">
+                                        Auto
+                                    </span>
+                                </div>
                                 <div v-if="isCheckingCode" class="mt-1 flex items-center gap-1.5 text-[10px] text-gray-400">
                                     <svg class="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
                                     Memeriksa ketersediaan...
@@ -257,6 +369,8 @@ const labelClass = 'block text-[10px] font-bold text-gray-500 mb-1.5';
                                     <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
                                     Kode aset sudah digunakan! Silakan gunakan kode lain agar tidak terduplikasi.
                                 </p>
+                                <p v-if="codeMode === 'auto' && !isEditing" class="text-[10px] text-gray-400 mt-1">Kode otomatis berdasarkan Subkategori, Departemen, dan Tanggal Pembelian.</p>
+                                <p v-if="codeMode === 'manual'" class="text-[10px] text-blue-500 mt-1">Anda dapat memasukkan kode asset sesuai kebutuhan. Pastikan kode unik.</p>
                                 <p v-if="form.errors.asset_code" class="text-xs text-red-500 mt-1">{{ form.errors.asset_code }}</p>
                             </div>
 
@@ -342,43 +456,47 @@ const labelClass = 'block text-[10px] font-bold text-gray-500 mb-1.5';
                                     <select v-model="form.status" required :class="inputClass">
                                         <option value="available">Tersedia</option>
                                         <option value="in_use">Digunakan</option>
+                                        <option value="borrowed">Dipinjam</option>
                                         <option value="maintenance">Perbaikan</option>
                                         <option value="damaged">Rusak</option>
                                     </select>
                                 </div>
                             </div>
 
-                            <!-- Lokasi & Departemen -->
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label :class="labelClass">Lokasi</label>
-                                    <select v-model="form.location_id" :class="inputClass">
-                                        <option value="">Pilih Lokasi</option>
-                                        <option v-for="loc in locations" :key="loc.id" :value="loc.id">{{ loc.name }}</option>
-                                    </select>
+                            <!-- Kondisional: Muncul hanya jika status bukan 'Tersedia' -->
+                            <div v-if="form.status !== 'available'" class="space-y-4 mb-4 animate-fadeIn">
+                                <!-- Lokasi & Departemen -->
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label :class="labelClass">Lokasi</label>
+                                        <select v-model="form.location_id" :class="inputClass">
+                                            <option value="">Pilih Lokasi</option>
+                                            <option v-for="loc in locations" :key="loc.id" :value="loc.id">{{ loc.name }}</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label :class="labelClass">Departemen *</label>
+                                        <select v-model="form.department_id" :required="form.status !== 'available'" :class="inputClass">
+                                            <option value="">Pilih Departemen</option>
+                                            <option v-for="dept in departments" :key="dept.id" :value="dept.id">{{ dept.name }} ({{ dept.code }})</option>
+                                            <option value="other">Lainnya (Input Manual)</option>
+                                        </select>
+                                        <p v-if="form.errors.department_id" class="text-xs text-red-500 mt-1">{{ form.errors.department_id }}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label :class="labelClass">Departemen *</label>
-                                    <select v-model="form.department_id" required :class="inputClass">
-                                        <option value="">Pilih Departemen</option>
-                                        <option v-for="dept in departments" :key="dept.id" :value="dept.id">{{ dept.name }} ({{ dept.code }})</option>
-                                        <option value="other">Lainnya (Input Manual)</option>
-                                    </select>
-                                    <p v-if="form.errors.department_id" class="text-xs text-red-500 mt-1">{{ form.errors.department_id }}</p>
+
+                                <!-- Manual Dept Input (only if 'other' selected) -->
+                                <div v-if="form.department_id === 'other'" class="animate-fadeIn">
+                                    <label :class="labelClass">Nama/Kode Departemen Manual</label>
+                                    <input v-model="form.department" type="text" :class="inputClass" placeholder="Contoh: TEK, GA, IT" />
                                 </div>
-                            </div>
 
-                            <!-- Manual Dept Input (only if 'other' selected) -->
-                            <div v-if="form.department_id === 'other'" class="mb-4 animate-fadeIn">
-                                <label :class="labelClass">Nama/Kode Departemen Manual</label>
-                                <input v-model="form.department" type="text" :class="inputClass" placeholder="Contoh: TEK, GA, IT" />
-                            </div>
-
-                            <!-- Pengguna/PIC -->
-                            <div class="mb-4">
-                                <label :class="labelClass">Pengguna / PIC</label>
-                                <input v-model="form.current_holder" type="text" :class="inputClass"
-                                    placeholder="Nama pemegang / penanggung jawab asset" />
+                                <!-- Pengguna/PIC -->
+                                <div>
+                                    <label :class="labelClass">Pengguna / PIC</label>
+                                    <input v-model="form.current_holder" type="text" :class="inputClass"
+                                        placeholder="Nama pemegang / penanggung jawab asset" />
+                                </div>
                             </div>
 
                             <!-- Keterangan -->
@@ -427,20 +545,30 @@ const labelClass = 'block text-[10px] font-bold text-gray-500 mb-1.5';
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <label :class="labelClass">Supplier</label>
-                                    <select v-model="form.vendor_id" :class="inputClass">
+                                    <select v-model="form.vendor_id" :class="inputClass" @change="form.vendor_id == 'other' ? form.vendor = '' : null">
                                         <option value="">Pilih Supplier</option>
                                         <option v-for="v in vendors" :key="v.id" :value="v.id">{{ v.name }}</option>
-                                        <option value="other">Input Manual</option>
+                                        <option value="other">+ Input Manual</option>
                                     </select>
-                                </div>
-                                <div v-if="form.vendor_id === 'other'">
-                                    <label :class="labelClass">Nama Supplier Manual</label>
-                                    <input v-model="form.vendor" type="text" :class="inputClass" placeholder="Contoh: Tokopedia, PT. ABC" />
                                 </div>
                                 <div>
                                     <label :class="labelClass">Harga Pembelian (Rp)</label>
-                                    <input v-model="form.purchase_price" type="number" min="0" step="1" :class="inputClass" placeholder="0" />
+                                    <div class="relative">
+                                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-semibold select-none">Rp</span>
+                                        <input :value="priceDisplay" @input="onPriceInput" type="text" inputmode="numeric"
+                                            :class="[inputClass, 'pl-10 font-mono tabular-nums']" placeholder="0" />
+                                    </div>
                                 </div>
+                            </div>
+                            <!-- Manual Vendor Input (shown when 'other' is selected) -->
+                            <div v-if="String(form.vendor_id) === 'other'" class="mb-4 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
+                                <label :class="labelClass" class="!text-blue-600">Nama Supplier / PT Manual *</label>
+                                <input v-model="form.vendor" type="text" :class="inputClass" required
+                                    placeholder="Contoh: PT. Tokopedia, CV. Sumber Jaya, dll" />
+                                <p class="text-[10px] text-blue-500 mt-1.5 flex items-center gap-1">
+                                    <svg class="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    Supplier akan otomatis tersimpan ke database dan muncul di daftar pilihan berikutnya.
+                                </p>
                             </div>
 
                             <!-- Tanggal Pembelian & Garansi -->
@@ -455,10 +583,45 @@ const labelClass = 'block text-[10px] font-bold text-gray-500 mb-1.5';
                                 </div>
                             </div>
 
-                            <!-- Masa Pemakaian -->
-                            <div class="mb-4">
-                                <label :class="labelClass">Masa Pemakaian</label>
-                                <input v-model="form.usage_period" type="text" :class="inputClass" placeholder="Contoh: 3 Tahun, 5 Tahun" />
+                            <!-- Umur Ekonomis & Nilai Residu (Sejajar) -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label :class="labelClass">Umur Ekonomis <span class="text-emerald-600">(Tahun)</span> *</label>
+                                    <input v-model="form.useful_life" type="number" min="0" :class="inputClass" placeholder="Contoh: 5" />
+                                    <p class="text-[9px] text-gray-400 mt-1">Estimasi masa manfaat dalam tahun.</p>
+                                </div>
+                                <div>
+                                    <label :class="labelClass">Nilai Residu <span class="text-emerald-600">(Rp)</span></label>
+                                    <div class="relative">
+                                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-semibold select-none">Rp</span>
+                                        <input :value="salvageDisplay" @input="onSalvageInput" type="text" inputmode="numeric"
+                                            :class="[inputClass, 'pl-10 font-mono tabular-nums']" placeholder="0" />
+                                    </div>
+                                    <p class="text-[9px] text-gray-400 mt-1">Estimasi nilai akhir aset.</p>
+                                </div>
+                            </div>
+
+                            <!-- Informasi Lisensi (Software) -->
+                            <div class="mt-6 pt-4 border-t border-gray-100">
+                                <span class="text-xs font-bold text-gray-800 uppercase tracking-widest block mb-4">Informasi Lisensi (Software)</span>
+                                <div class="mb-4">
+                                    <label :class="labelClass">License Key / Serial Number</label>
+                                    <input v-model="form.license_key" type="text" :class="inputClass" placeholder="Contoh: XXXX-XXXX-XXXX-XXXX" />
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label :class="labelClass">Tipe Lisensi</label>
+                                        <select v-model="form.license_type" :class="inputClass">
+                                            <option value="none">Tidak Ada</option>
+                                            <option value="perpetual">Perpetual (Seumur Hidup)</option>
+                                            <option value="subscription">Subscription (Berlangganan)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label :class="labelClass">Tanggal Kadaluarsa Lisensi</label>
+                                        <input v-model="form.license_expiration_date" type="date" :class="inputClass" />
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Catatan Tambahan -->

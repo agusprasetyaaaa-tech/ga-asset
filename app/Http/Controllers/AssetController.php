@@ -4,18 +4,31 @@ namespace App\Http\Controllers;
 
 use App\Models\Asset;
 use App\Models\Location;
+use App\Models\Vendor;
 use App\Models\AssetMovement;
 use App\Models\MaintenanceLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class AssetController extends Controller
+class AssetController extends Controller implements HasMiddleware
 {
     /**
      * Display a listing of assets with filtering and search.
      */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('can:view assets', only: ['index', 'show', 'expirations', 'printBarcodes']),
+            new Middleware('can:create assets', only: ['create', 'store', 'import']),
+            new Middleware('can:edit assets', only: ['edit', 'update', 'updateStatus', 'returnToUser']),
+            new Middleware('can:delete assets', only: ['destroy', 'bulkDelete']),
+        ];
+    }
+
     public function index(Request $request)
     {
         $perPage = $request->input('per_page', 10);
@@ -86,8 +99,8 @@ class AssetController extends Controller
             'condition'      => 'required|in:baik,cukup_baik,kurang_baik,rusak',
             'status'         => 'required|in:available,in_use,maintenance,damaged',
             'location_id'    => 'nullable|exists:locations,id',
-            'department_id'  => 'nullable|exists:departments,id',
-            'vendor_id'      => 'nullable|exists:vendors,id',
+            'department_id'  => 'nullable|string|max:255',
+            'vendor_id'      => 'nullable|string|max:255',
             'department'     => 'nullable|string|max:255',
             'current_holder' => 'nullable|string|max:255',
             'description'    => 'nullable|string',
@@ -97,9 +110,33 @@ class AssetController extends Controller
             'vendor'         => 'nullable|string|max:255',
             'warranty_date'  => 'nullable|date',
             'usage_period'   => 'nullable|string|max:255',
+            'salvage_value'  => 'nullable|numeric|min:0',
+            'useful_life'    => 'nullable|integer|min:0',
+            'license_key'    => 'nullable|string|max:255',
+            'license_type'   => 'nullable|in:perpetual,subscription,none',
+            'license_expiration_date' => 'nullable|date',
             'notes'          => 'nullable|string',
             'asset_owner'    => 'nullable|string|max:255',
         ]);
+
+        // Handle department_id 'other'
+        if ($request->input('department_id') === 'other') {
+            $validated['department_id'] = null;
+        }
+
+        // Handle manual vendor input: auto-create vendor if 'other' is selected
+        if ($request->input('vendor_id') === 'other' && $request->filled('vendor')) {
+            $vendor = Vendor::firstOrCreate(
+                ['name' => trim($request->input('vendor'))],
+                ['name' => trim($request->input('vendor'))]
+            );
+            $validated['vendor_id'] = $vendor->id;
+            $validated['vendor'] = $vendor->name;
+        } elseif ($request->input('vendor_id') && $request->input('vendor_id') !== 'other') {
+            $validated['vendor_id'] = $request->input('vendor_id');
+        } else {
+            $validated['vendor_id'] = null;
+        }
 
         // Generate asset code if not provided by form
         $deptParam = $request->department_id ?: $request->department;
@@ -145,9 +182,29 @@ class AssetController extends Controller
         return redirect()->route('assets.index')->with('success', 'Asset berhasil ditambahkan.');
     }
 
+    public function expirations()
+    {
+        $assets = Asset::with(['subcategory', 'location'])
+            ->where(function($query) {
+                $query->whereNotNull('warranty_date')
+                    ->where('warranty_date', '<=', now()->addDays(60)); // Show items expiring in 60 days
+            })
+            ->orWhere(function($query) {
+                $query->whereNotNull('license_expiration_date')
+                    ->where('license_expiration_date', '<=', now()->addDays(60));
+            })
+            ->orderBy('warranty_date', 'asc')
+            ->orderBy('license_expiration_date', 'asc')
+            ->get();
+
+        return Inertia::render('Assets/Expirations', [
+            'assets' => $assets
+        ]);
+    }
+
     public function show(Asset $asset)
     {
-        $asset->load(['location', 'subcategory.category', 'movements.user', 'maintenanceLogs.user']);
+        $asset->load(['location', 'subcategory.category', 'movements.user', 'maintenanceLogs.user', 'department_rel']);
         return Inertia::render('Assets/Show', [
             'asset' => $asset,
             'locations' => \App\Models\Location::all(),
@@ -168,10 +225,10 @@ class AssetController extends Controller
             'serial_number' => 'required|string|max:255|unique:assets,serial_number,' . $asset->id,
             'specification' => 'nullable|string',
             'condition' => 'required|in:baik,cukup_baik,kurang_baik,rusak',
-            'status' => 'required|in:available,in_use,maintenance,damaged',
+            'status' => 'required|in:available,in_use,maintenance,damaged,borrowed',
             'location_id' => 'nullable|exists:locations,id',
-            'department_id' => 'nullable|exists:departments,id',
-            'vendor_id' => 'nullable|exists:vendors,id',
+            'department_id' => 'nullable|string|max:255',
+            'vendor_id' => 'nullable|string|max:255',
             'department' => 'nullable|string|max:255',
             'current_holder' => 'nullable|string|max:255',
             'description' => 'nullable|string',
@@ -181,9 +238,33 @@ class AssetController extends Controller
             'vendor' => 'nullable|string|max:255',
             'warranty_date' => 'nullable|date',
             'usage_period' => 'nullable|string|max:255',
+            'salvage_value' => 'nullable|numeric|min:0',
+            'useful_life' => 'nullable|integer|min:0',
+            'license_key' => 'nullable|string|max:255',
+            'license_type' => 'nullable|in:perpetual,subscription,none',
+            'license_expiration_date' => 'nullable|date',
             'notes' => 'nullable|string',
             'asset_owner' => 'nullable|string|max:255',
         ]);
+
+        // Handle department_id 'other'
+        if ($request->input('department_id') === 'other') {
+            $validated['department_id'] = null;
+        }
+
+        // Handle manual vendor input: auto-create vendor if 'other' is selected
+        if ($request->input('vendor_id') === 'other' && $request->filled('vendor')) {
+            $vendor = Vendor::firstOrCreate(
+                ['name' => trim($request->input('vendor'))],
+                ['name' => trim($request->input('vendor'))]
+            );
+            $validated['vendor_id'] = $vendor->id;
+            $validated['vendor'] = $vendor->name;
+        } elseif ($request->input('vendor_id') && $request->input('vendor_id') !== 'other') {
+            $validated['vendor_id'] = $request->input('vendor_id');
+        } else {
+            $validated['vendor_id'] = null;
+        }
 
         $oldHolder = $asset->current_holder;
         $oldLocationId = $asset->location_id;
@@ -218,6 +299,12 @@ class AssetController extends Controller
         return back()->with('success', 'Asset berhasil diperbarui.');
     }
 
+    public function markAsAvailable(Asset $asset)
+    {
+        $asset->update(['status' => 'available']);
+        return redirect()->back()->with('success', "Aset {$asset->name} sekarang tersedia.");
+    }
+
     /**
      * Remove the specified asset.
      */
@@ -236,7 +323,7 @@ class AssetController extends Controller
     public function updateStatus(Request $request, Asset $asset)
     {
         $validated = $request->validate([
-            'status'          => 'required|in:available,in_use,maintenance,damaged',
+            'status'          => 'required|in:available,in_use,maintenance,damaged,borrowed',
             'to_holder'       => 'nullable|string|max:255',
             'to_location_id'  => 'nullable|exists:locations,id',
             'notes'           => 'nullable|string',
@@ -300,17 +387,20 @@ class AssetController extends Controller
     {
         $validated = $request->validate([
             'user_name'      => 'required|string|max:255',
+            'department_id'  => 'nullable|exists:departments,id',
             'to_location_id' => 'nullable|exists:locations,id',
             'notes'          => 'nullable|string',
         ]);
 
         $oldLocationId = $asset->location_id;
         $oldHolder = $asset->current_holder ?: ($asset->subcategory->managing_dept ?: 'Pengelola Aset');
-        $managingDept = $asset->subcategory->managing_dept ?: 'Pengelola Aset';
-
-        // Force update status and holder
+        
+        // Force update status, holder, and department
         $asset->status = 'in_use';
         $asset->current_holder = $validated['user_name'];
+        if ($request->filled('department_id')) {
+            $asset->department_id = $validated['department_id'];
+        }
         if ($request->filled('to_location_id')) {
             $asset->location_id = $request->to_location_id;
         }

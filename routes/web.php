@@ -2,7 +2,10 @@
 
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AssetCodeSettingController;
+use App\Http\Controllers\AssetExportController;
+use App\Http\Controllers\AssetLoanController;
 use App\Http\Controllers\AssetMovementController;
+use App\Http\Controllers\AuditController;
 use App\Http\Controllers\BarcodeScanController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
@@ -14,12 +17,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
+    return redirect()->route('login');
 });
 
 // Public Routes (Accessible without login)
@@ -33,7 +31,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Assets CRUD & Trash
@@ -43,6 +41,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/assets/bulk-restore', [AssetController::class, 'bulkRestore'])->name('assets.bulk-restore');
     Route::post('/assets/bulk-force-delete', [AssetController::class, 'bulkForceDelete'])->name('assets.bulk-force-delete');
     Route::resource('assets', AssetController::class)->except(['create', 'edit']);
+    Route::patch('/assets/{asset}/available', [AssetController::class, 'markAsAvailable'])->name('assets.available');
+    Route::get('/assets/monitoring/expirations', [AssetController::class, 'expirations'])->name('assets.expirations');
     Route::post('/assets/bulk-delete', [AssetController::class, 'bulkDelete'])->name('assets.bulk-delete');
     Route::patch('/assets/{asset}/status', [AssetController::class, 'updateStatus'])->name('assets.status');
     Route::patch('/assets/{asset}/return-to-user', [AssetController::class, 'returnToUser'])->name('assets.return-to-user');
@@ -52,6 +52,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Asset Printing
     Route::get('/assets/print/select', [\App\Http\Controllers\AssetPrintController::class, 'index'])->name('assets.print-index');
     Route::get('/assets/print/layout', [\App\Http\Controllers\AssetPrintController::class, 'print'])->name('assets.print');
+
+    // Asset Export & Import
+    Route::get('/assets/export/excel', [\App\Http\Controllers\AssetExportController::class, 'excel'])->name('assets.export.excel');
+    Route::get('/assets/export/pdf', [\App\Http\Controllers\AssetExportController::class, 'pdf'])->name('assets.export.pdf');
+    Route::post('/assets/import', [\App\Http\Controllers\AssetExportController::class, 'import'])->name('assets.import');
+    Route::get('/assets/import/template', [\App\Http\Controllers\AssetExportController::class, 'template'])->name('assets.import.template');
 
     // Categories & Subcategories
     Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
@@ -63,12 +69,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Locations CRUD
     Route::resource('locations', LocationController::class)->except(['create', 'edit', 'show']);
+    Route::post('/locations/bulk-delete', [LocationController::class, 'bulkDelete'])->name('locations.bulk-delete');
 
     // Departments CRUD
     Route::resource('departments', \App\Http\Controllers\DepartmentController::class)->except(['create', 'edit', 'show']);
+    Route::post('/departments/bulk-delete', [\App\Http\Controllers\DepartmentController::class, 'bulkDelete'])->name('departments.bulk-delete');
 
     // Vendors CRUD
     Route::resource('vendors', \App\Http\Controllers\VendorController::class)->except(['create', 'edit', 'show']);
+    Route::post('/vendors/bulk-delete', [\App\Http\Controllers\VendorController::class, 'bulkDelete'])->name('vendors.bulk-delete');
 
     // Asset Movements
     Route::post('/movements', [AssetMovementController::class, 'store'])->name('movements.store');
@@ -87,6 +96,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/settings/asset-code', [AssetCodeSettingController::class, 'update'])->name('settings.asset-code.update');
     Route::post('/settings/asset-code/reset', [AssetCodeSettingController::class, 'resetCounter'])->name('settings.asset-code.reset');
     Route::post('/settings/asset-code/preview', [AssetCodeSettingController::class, 'preview'])->name('settings.asset-code.preview');
+
+    // User Management (Admin Only)
+    Route::middleware(['role:admin'])->group(function () {
+        Route::resource('users', \App\Http\Controllers\UserController::class)->except(['create', 'edit', 'show']);
+        Route::post('/users/bulk-delete', [\App\Http\Controllers\UserController::class, 'bulkDelete'])->name('users.bulk-delete');
+    });
+
+    // Audits
+    Route::resource('audits', \App\Http\Controllers\AuditController::class)->only(['index', 'store', 'show', 'destroy']);
+    Route::post('/audits/{audit}/scan', [\App\Http\Controllers\AuditController::class, 'scan'])->name('audits.scan');
+    Route::post('/audits/{audit}/complete', [\App\Http\Controllers\AuditController::class, 'complete'])->name('audits.complete');
+    Route::get('/audits/{audit}/export-pdf', [\App\Http\Controllers\AuditController::class, 'exportPdf'])->name('audits.export-pdf');
+    Route::post('/audits/bulk-delete', [AuditController::class, 'bulkDelete'])->name('audits.bulk-delete');
+    
+    // Asset Loans
+    Route::get('/loans', [AssetLoanController::class, 'index'])->name('loans.index');
+    Route::post('/loans', [AssetLoanController::class, 'store'])->name('loans.store');
+    Route::post('/loans/bulk-delete', [AssetLoanController::class, 'bulkDelete'])->name('loans.bulk-delete');
+    Route::patch('/loans/{loan}/return', [AssetLoanController::class, 'return'])->name('loans.return');
 
     // API: Check & Suggest Asset Code
     Route::get('/assets/check-code', [AssetController::class, 'checkCode'])->name('assets.check-code');

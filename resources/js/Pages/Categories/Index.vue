@@ -5,8 +5,11 @@
  */
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ConfirmModal from '@/Components/ConfirmModal.vue';
-import { Head, useForm, Link, router } from '@inertiajs/vue3';
+import { Head, useForm, Link, router, usePage } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
+
+const page = usePage();
+const can = (permission) => page.props.auth.user.permissions.includes(permission);
 
 const props = defineProps({
     categories: Object,
@@ -211,12 +214,12 @@ const deleteSub = (sub) => {
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                     
                     <!-- KATEGORI UTAMA CARD -->
-                    <div class="flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-opacity duration-300" :class="{'opacity-40 pointer-events-none': isCatLoading}">
+                    <div class="flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[600px] transition-opacity duration-300" :class="{'opacity-40 pointer-events-none': isCatLoading}">
                         <!-- Card Header -->
                         <div class="px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-gray-50 to-white">
                             <div class="flex items-center gap-3 shrink-0">
-                                <div class="h-9 w-9 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center">
-                                    <svg class="h-4.5 w-4.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <div class="h-10 w-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+                                    <svg class="h-5 w-5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
                                     </svg>
                                 </div>
@@ -226,27 +229,44 @@ const deleteSub = (sub) => {
                                 </div>
                             </div>
                             
-                            <!-- Search & Actions -->
-                            <div class="flex items-center gap-2 flex-grow sm:justify-end">
-                                <div class="relative flex-grow max-w-[200px]">
-                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <svg class="h-3 w-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                                        </svg>
-                                    </div>
-                                    <input v-model="catSearch" type="text" placeholder="Cari..." 
-                                        class="w-full pl-8 pr-3 py-1.5 text-[11px] rounded-lg border-gray-200 bg-gray-50 focus:ring-1 focus:ring-emerald-500 transition-all font-medium" />
-                                </div>
-                                <button v-if="selectedCats.length > 0" @click="bulkDeleteCats" 
-                                    class="bg-rose-50 text-rose-600 border border-rose-100 px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-rose-600 hover:text-white transition-all flex items-center gap-1.5 shadow-sm uppercase shrink-0">
-                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                    Hapus ({{ selectedCats.length }})
-                                </button>
-                                <button @click="openCreateCat" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 transition flex items-center gap-2 shadow-sm shrink-0">
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+                        <!-- Search & Actions -->
+                        <div class="flex items-center gap-2 flex-grow sm:justify-end">
+                            <div class="relative flex-grow max-w-[200px]">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-3 w-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                                     </svg>
-                                    Tambah
+                                </div>
+                                <input v-model="catSearch" type="text" placeholder="Cari..." 
+                                    class="w-full pl-8 pr-3 py-1.5 text-[11px] rounded-lg border-gray-200 bg-gray-50 focus:ring-1 focus:ring-emerald-500 transition-all font-medium" />
+                            </div>
+                            <button @click="openCreateCat" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 transition flex items-center gap-2 shadow-sm shrink-0">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Tambah
+                            </button>
+                        </div>
+                    </div>
+
+
+                        <!-- Bulk Delete & Select All Indicator -->
+                        <div v-if="categories.data?.length > 0" class="px-6 py-3 border-b border-gray-100">
+                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 rounded-xl transition-all border"
+                                :class="selectedCats.length > 0 ? 'bg-rose-50 border-rose-100' : 'bg-gray-50/50 border-gray-100'">
+                                <div class="flex items-center gap-3">
+                                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                                        <input type="checkbox" @change="toggleAllCats" :checked="selectedCats.length === categories.data.length && categories.data.length > 0"
+                                            class="h-5 w-5 rounded-lg border-gray-300 text-emerald-600 focus:ring-emerald-500 transition" />
+                                        <span class="text-xs font-bold text-gray-600">Pilih Semua</span>
+                                    </label>
+                                    <span v-if="selectedCats.length > 0" class="h-4 w-[1px] bg-rose-200 hidden sm:block"></span>
+                                    <span v-if="selectedCats.length > 0" class="text-xs font-extrabold text-rose-700">{{ selectedCats.length }} dipilih</span>
+                                </div>
+                                <button v-if="selectedCats.length > 0 && can('delete database')" @click="bulkDeleteCats"
+                                    class="flex items-center justify-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-black shadow-sm shadow-rose-100 active:scale-95 transition-all">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    Hapus Semua
                                 </button>
                             </div>
                         </div>
@@ -256,12 +276,9 @@ const deleteSub = (sub) => {
                             <table class="min-w-full text-left">
                                 <thead class="bg-gray-50/80">
                                     <tr>
-                                        <th class="px-4 py-3 border-b border-gray-100 w-10 text-center">
-                                            <input type="checkbox" @change="toggleAllCats" :checked="selectedCats.length === categories.data.length && categories.data.length > 0"
-                                                class="h-3.5 w-3.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 transition cursor-pointer" />
-                                        </th>
-                                        <th class="px-2 py-3 border-b border-gray-100 w-10 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">No</th>
-                                        <th @click="toggleSortCat" class="px-6 py-3 border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:bg-emerald-50 select-none group transition-all">
+                                        <th class="px-4 py-3 border-b border-gray-100 w-10 text-center"></th>
+                                        <th class="px-2 py-3 border-b border-gray-100 w-10 text-center text-xs font-bold text-gray-500">No</th>
+                                        <th @click="toggleSortCat" class="px-6 py-3 border-b border-gray-100 text-xs font-bold text-gray-500 cursor-pointer hover:bg-emerald-50 select-none group transition-all">
                                             <div class="flex items-center gap-1.5">
                                                 Detail Kategori
                                                 <div class="flex flex-col -space-y-1 opacity-40 group-hover:opacity-100 transition-opacity">
@@ -270,8 +287,8 @@ const deleteSub = (sub) => {
                                                 </div>
                                             </div>
                                         </th>
-                                        <th class="px-6 py-3 border-b border-gray-100 text-center w-16 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sub</th>
-                                        <th class="px-6 py-3 border-b border-gray-100 text-right w-24 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Aksi</th>
+                                        <th class="px-6 py-3 border-b border-gray-100 text-center w-16 text-xs font-bold text-gray-500">Sub</th>
+                                        <th class="px-6 py-3 border-b border-gray-100 text-right w-24 text-xs font-bold text-gray-500">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-50">
@@ -299,10 +316,10 @@ const deleteSub = (sub) => {
                                         </td>
                                         <td class="px-6 py-4 text-right">
                                             <div class="flex justify-end gap-1">
-                                                <button @click="openEditCat(cat)" class="p-1.5 text-gray-400 hover:text-amber-600 rounded-md hover:bg-amber-50 transition-all duration-150" title="Edit">
+                                                <button v-if="can('edit database')" @click="openEditCat(cat)" class="p-1.5 text-gray-400 hover:text-amber-600 rounded-md hover:bg-amber-50 transition-all duration-150" title="Edit">
                                                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                                 </button>
-                                                <button @click="deleteCat(cat)" class="p-1.5 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-all duration-150" title="Hapus">
+                                                <button v-if="can('delete database')" @click="deleteCat(cat)" class="p-1.5 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-all duration-150" title="Hapus">
                                                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                                 </button>
                                             </div>
@@ -337,9 +354,9 @@ const deleteSub = (sub) => {
                                         <option :value="50">50</option>
                                         <option value="all">ALL</option>
                                     </select>
-                                    <svg class="absolute right-2 h-2.5 w-2.5 text-emerald-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"/></svg>
-                                </div>
+                                <svg class="absolute right-2 h-2.5 w-2.5 text-emerald-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"/></svg>
                             </div>
+                        </div>
 
                             <nav v-if="categories.links.length > 3" class="flex gap-1">
                                 <template v-for="(link, k) in categories.links" :key="k">
@@ -354,12 +371,12 @@ const deleteSub = (sub) => {
                     </div>
 
                     <!-- SUBKATEGORI CARD -->
-                    <div class="flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-opacity duration-300" :class="{'opacity-40 pointer-events-none': isSubLoading}">
+                    <div class="flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[600px] transition-opacity duration-300" :class="{'opacity-40 pointer-events-none': isSubLoading}">
                         <!-- Card Header -->
                         <div class="px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-gray-50 to-white">
                             <div class="flex items-center gap-3 shrink-0">
-                                <div class="h-9 w-9 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
-                                    <svg class="h-4.5 w-4.5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <div class="h-10 w-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+                                    <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
                                     </svg>
                                 </div>
@@ -378,13 +395,8 @@ const deleteSub = (sub) => {
                                         </svg>
                                     </div>
                                     <input v-model="subSearch" type="text" placeholder="Cari..." 
-                                        class="w-full pl-8 pr-3 py-1.5 text-[11px] rounded-lg border-gray-200 bg-gray-50 focus:ring-1 focus:ring-blue-500 transition-all font-medium" />
+                                        class="w-full pl-8 pr-3 py-1.5 text-[11px] rounded-lg border-gray-200 bg-gray-50 focus:ring-1 focus:ring-emerald-500 transition-all font-medium" />
                                 </div>
-                                <button v-if="selectedSubs.length > 0" @click="bulkDeleteSubs" 
-                                    class="bg-rose-50 text-rose-600 border border-rose-100 px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-rose-600 hover:text-white transition-all flex items-center gap-1.5 shadow-sm uppercase shrink-0">
-                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                    Hapus ({{ selectedSubs.length }})
-                                </button>
                                 <button @click="openCreateSub" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 transition flex items-center gap-2 shadow-sm shrink-0">
                                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
@@ -394,17 +406,36 @@ const deleteSub = (sub) => {
                             </div>
                         </div>
 
+
+                        <!-- Bulk Delete & Select All Indicator -->
+                        <div v-if="subcategories.data?.length > 0" class="px-6 py-3 border-b border-gray-100">
+                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 rounded-xl transition-all border"
+                                :class="selectedSubs.length > 0 ? 'bg-rose-50 border-rose-100' : 'bg-gray-50/50 border-gray-100'">
+                                <div class="flex items-center gap-3">
+                                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                                        <input type="checkbox" @change="toggleAllSubs" :checked="selectedSubs.length === subcategories.data.length && subcategories.data.length > 0"
+                                            class="h-5 w-5 rounded-lg border-gray-300 text-emerald-600 focus:ring-emerald-500 transition" />
+                                        <span class="text-xs font-bold text-gray-600">Pilih Semua</span>
+                                    </label>
+                                    <span v-if="selectedSubs.length > 0" class="h-4 w-[1px] bg-rose-200 hidden sm:block"></span>
+                                    <span v-if="selectedSubs.length > 0" class="text-xs font-extrabold text-rose-700">{{ selectedSubs.length }} dipilih</span>
+                                </div>
+                                <button v-if="selectedSubs.length > 0" @click="bulkDeleteSubs"
+                                    class="flex items-center justify-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-black shadow-sm shadow-rose-100 active:scale-95 transition-all">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    Hapus Semua
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- Table -->
                         <div class="flex-grow overflow-x-auto min-h-[300px]">
                             <table class="min-w-full text-left">
                                 <thead class="bg-gray-50/80">
                                     <tr>
-                                        <th class="px-4 py-3 border-b border-gray-100 w-10 text-center">
-                                            <input type="checkbox" @change="toggleAllSubs" :checked="selectedSubs.length === subcategories.data.length && subcategories.data.length > 0"
-                                                class="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 transition cursor-pointer" />
-                                        </th>
-                                        <th class="px-2 py-3 border-b border-gray-100 w-10 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">No</th>
-                                        <th @click="toggleSortSub" class="px-6 py-3 border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:bg-blue-50 select-none group transition-all">
+                                        <th class="px-4 py-3 border-b border-gray-100 w-10 text-center"></th>
+                                        <th class="px-2 py-3 border-b border-gray-100 w-10 text-center text-xs font-bold text-gray-500">No</th>
+                                        <th @click="toggleSortSub" class="px-6 py-3 border-b border-gray-100 text-xs font-bold text-gray-500 cursor-pointer hover:bg-blue-50 select-none group transition-all">
                                             <div class="flex items-center gap-1.5">
                                                 Subkategori
                                                 <div class="flex flex-col -space-y-1 opacity-40 group-hover:opacity-100 transition-opacity">
@@ -413,9 +444,9 @@ const deleteSub = (sub) => {
                                                 </div>
                                             </div>
                                         </th>
-                                        <th class="px-6 py-3 border-b border-gray-100 w-32 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Induk</th>
-                                        <th class="px-6 py-3 border-b border-gray-100 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">Identitas</th>
-                                        <th class="px-6 py-3 border-b border-gray-100 text-right w-24 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Aksi</th>
+                                        <th class="px-6 py-3 border-b border-gray-100 w-32 text-xs font-bold text-gray-500">Induk</th>
+                                        <th class="px-6 py-3 border-b border-gray-100 text-center text-xs font-bold text-gray-500">Identitas</th>
+                                        <th class="px-6 py-3 border-b border-gray-100 text-right w-24 text-xs font-bold text-gray-500">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-50">
@@ -461,10 +492,10 @@ const deleteSub = (sub) => {
                                         </td>
                                         <td class="px-6 py-4 text-right">
                                             <div class="flex justify-end gap-1">
-                                                <button @click="openEditSub(sub)" class="p-1.5 text-gray-400 hover:text-amber-600 rounded-md hover:bg-amber-50 transition-all duration-150" title="Edit">
+                                                <button v-if="can('edit database')" @click="openEditSub(sub)" class="p-1.5 text-gray-400 hover:text-amber-600 rounded-md hover:bg-amber-50 transition-all duration-150" title="Edit">
                                                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                                 </button>
-                                                <button @click="deleteSub(sub)" class="p-1.5 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-all duration-150" title="Hapus">
+                                                <button v-if="can('delete database')" @click="deleteSub(sub)" class="p-1.5 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-all duration-150" title="Hapus">
                                                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                                 </button>
                                             </div>
@@ -493,13 +524,13 @@ const deleteSub = (sub) => {
                                 <div class="relative flex items-center">
                                     <select v-model="subPerPage" 
                                         style="-webkit-appearance: none; -moz-appearance: none; appearance: none; background-image: none !important;"
-                                        class="appearance-none bg-none text-[10px] font-bold text-blue-700 bg-blue-50 border-blue-200 rounded-lg py-1 pl-2 pr-6 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer shadow-sm transition-all uppercase">
+                                        class="appearance-none bg-none text-[10px] font-bold text-emerald-700 bg-emerald-50 border-emerald-200 rounded-lg py-1 pl-2 pr-6 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer shadow-sm transition-all uppercase">
                                         <option :value="10">10</option>
                                         <option :value="25">25</option>
                                         <option :value="50">50</option>
                                         <option value="all">ALL</option>
                                     </select>
-                                    <svg class="absolute right-2 h-2.5 w-2.5 text-blue-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"/></svg>
+                                    <svg class="absolute right-2 h-2.5 w-2.5 text-emerald-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"/></svg>
                                 </div>
                             </div>
 

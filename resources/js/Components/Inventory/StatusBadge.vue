@@ -7,7 +7,7 @@ const props = defineProps({
     status: {
         type: String,
         required: true,
-        validator: (val) => ['available', 'in_use', 'maintenance', 'damaged'].includes(val),
+        validator: (val) => ['available', 'in_use', 'maintenance', 'damaged', 'borrowed'].includes(val),
     },
     customLabel: {
         type: String,
@@ -25,6 +25,11 @@ const statusConfig = {
         label: 'Digunakan',
         classes: 'bg-blue-50 text-blue-700 border-blue-100',
         icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>`,
+    },
+    borrowed: {
+        label: 'Dipinjam',
+        classes: 'bg-indigo-50 text-indigo-700 border-indigo-100',
+        icon: `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
     },
     maintenance: {
         label: 'Perbaikan',

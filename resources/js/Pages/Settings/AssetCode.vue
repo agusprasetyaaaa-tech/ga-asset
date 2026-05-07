@@ -1,6 +1,6 @@
 <script setup>
 /**
- * Asset Code Template Settings Page - Updated
+ * Asset Code Template Settings Page - Professional Responsive UI
  * Supports custom formats like LTP/GA/2/2025
  */
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
@@ -127,20 +127,38 @@ const labelClass = 'block text-[10px] font-bold text-gray-500 uppercase tracking
         <template #header>
             <div>
                 <h2 class="text-2xl font-bold text-gray-900 leading-tight">Konfigurasi Kode Asset</h2>
-                    <p class="text-xs text-gray-400 font-medium mt-1">Konfigurasi Struktur Penomoran Otomatis dan Format Barcode Aset</p>
+                <p class="text-xs text-gray-500 mt-1">Konfigurasi struktur penomoran otomatis dan format barcode aset.</p>
             </div>
         </template>
 
-        <div class="py-8">
+        <div class="py-6 sm:py-8">
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
-                    <!-- Settings Form (Left) -->
-                    <div class="flex flex-col">
+                <!-- Mobile: Live Preview Sticky on Top -->
+                <div class="lg:hidden mb-5">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-emerald-50 to-white">
+                            <h3 class="text-xs font-bold text-emerald-800 uppercase tracking-wider">Live Preview</h3>
+                        </div>
+                        <div class="p-4">
+                            <div class="w-full text-center p-4 bg-emerald-50/30 border-2 border-dashed border-emerald-100 rounded-xl">
+                                <p class="font-mono text-lg font-bold text-emerald-600 tracking-wider break-all">
+                                    {{ livePreview }}
+                                </p>
+                                <p class="text-[9px] text-gray-400 mt-1.5 font-bold uppercase tracking-widest">Preview ({{ form.prefix }})</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+
+                    <!-- Settings Form (Left — 3 cols on lg) -->
+                    <div class="lg:col-span-3">
                         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                            <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+                            <div class="px-5 py-4 sm:px-6 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
                                 <div class="flex items-center gap-3">
-                                    <div class="h-9 w-9 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+                                    <div class="h-9 w-9 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
                                         <svg class="h-4 w-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -153,7 +171,7 @@ const labelClass = 'block text-[10px] font-bold text-gray-500 uppercase tracking
                                 </div>
                             </div>
 
-                            <form @submit.prevent="submitForm" class="p-6 space-y-5">
+                            <form @submit.prevent="submitForm" class="p-5 sm:p-6 space-y-5">
                                 <!-- Prefix -->
                                 <div>
                                     <label :class="labelClass">Prefix Default (Fallback) *</label>
@@ -166,11 +184,11 @@ const labelClass = 'block text-[10px] font-bold text-gray-500 uppercase tracking
                                 <!-- Separator -->
                                 <div>
                                     <label :class="labelClass">Pemisah (Separator) *</label>
-                                    <div class="grid grid-cols-4 gap-2">
+                                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                         <label v-for="opt in separatorOptions" :key="opt.value"
-                                            class="flex items-center justify-center px-3 py-2.5 rounded-lg border cursor-pointer transition-all text-sm font-semibold"
+                                            class="flex items-center justify-center px-3 py-2.5 rounded-lg border cursor-pointer transition-all duration-200 text-sm font-semibold"
                                             :class="form.separator === opt.value 
-                                                ? 'bg-emerald-50 border-emerald-300 text-emerald-700' 
+                                                ? 'bg-emerald-50 border-emerald-300 text-emerald-700 ring-1 ring-emerald-200' 
                                                 : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'">
                                             <input type="radio" v-model="form.separator" :value="opt.value" class="hidden" />
                                             {{ opt.label }}
@@ -198,11 +216,11 @@ const labelClass = 'block text-[10px] font-bold text-gray-500 uppercase tracking
                                 <!-- Digit Length -->
                                 <div>
                                     <label :class="labelClass">Jumlah Digit Nomor Urut *</label>
-                                    <div class="grid grid-cols-8 gap-2">
+                                    <div class="grid grid-cols-4 sm:grid-cols-8 gap-2">
                                         <label v-for="n in [1, 2, 3, 4, 5, 6, 7, 8]" :key="n"
-                                            class="flex items-center justify-center px-3 py-2.5 rounded-lg border cursor-pointer transition-all text-sm font-bold"
+                                            class="flex items-center justify-center px-3 py-2.5 rounded-lg border cursor-pointer transition-all duration-200 text-sm font-bold"
                                             :class="form.digit_length === n 
-                                                ? 'bg-emerald-50 border-emerald-300 text-emerald-700' 
+                                                ? 'bg-emerald-50 border-emerald-300 text-emerald-700 ring-1 ring-emerald-200' 
                                                 : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'">
                                             <input type="radio" v-model="form.digit_length" :value="n" class="hidden" />
                                             {{ n }}
@@ -216,7 +234,7 @@ const labelClass = 'block text-[10px] font-bold text-gray-500 uppercase tracking
                                     <label :class="labelClass">Reset Nomor Urut *</label>
                                     <div class="space-y-2">
                                         <label v-for="(label, value) in resetLabels" :key="value"
-                                            class="flex items-start gap-3 px-4 py-3 rounded-lg border cursor-pointer transition-all"
+                                            class="flex items-start gap-3 px-4 py-3 rounded-lg border cursor-pointer transition-all duration-200"
                                             :class="form.reset_period === value 
                                                 ? 'bg-emerald-50 border-emerald-300 ring-1 ring-emerald-200' 
                                                 : 'bg-white border-gray-200 hover:bg-gray-50'">
@@ -231,60 +249,63 @@ const labelClass = 'block text-[10px] font-bold text-gray-500 uppercase tracking
                                 </div>
 
                                 <!-- Actions -->
-                                <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                                <div class="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-4 border-t border-gray-100">
                                     <button type="button" @click="resetCounter"
-                                        class="text-xs font-bold text-rose-500 hover:text-rose-700 transition">
+                                        class="w-full sm:w-auto text-xs font-bold text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-4 py-2.5 rounded-lg border border-transparent hover:border-rose-100 transition-all duration-200">
                                         Reset Nomor Urut
                                     </button>
                                     <button type="submit" :disabled="form.processing || !hasChanges"
-                                        class="rounded-lg bg-emerald-600 px-8 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition disabled:opacity-40">
-                                        Simpan Perubahan
+                                        class="w-full sm:w-auto rounded-lg bg-emerald-600 px-8 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition-all duration-200 disabled:opacity-40 active:scale-[0.97]">
+                                        {{ form.processing ? 'Menyimpan...' : 'Simpan Perubahan' }}
                                     </button>
                                 </div>
                             </form>
                         </div>
                     </div>
 
-                    <!-- Live Preview (Right) -->
-                    <div class="flex flex-col gap-6">
-                        <!-- Preview Card -->
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                            <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-emerald-50 to-white">
+                    <!-- Live Preview + Info (Right — 2 cols on lg) -->
+                    <div class="lg:col-span-2 space-y-5">
+
+                        <!-- Desktop Preview Card (hidden on mobile, shown above on mobile) -->
+                        <div class="hidden lg:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                            <div class="px-5 py-4 sm:px-6 border-b border-gray-100 bg-gradient-to-r from-emerald-50 to-white">
                                 <h3 class="text-sm font-bold text-emerald-800">Live Preview (Struktur Utama)</h3>
                                 <p class="text-[10px] text-emerald-600 font-medium">Berdasarkan prefix default di samping</p>
                             </div>
                             <div class="p-6">
                                 <div class="w-full text-center p-6 bg-emerald-50/30 border-2 border-dashed border-emerald-100 rounded-2xl">
-                                    <p class="font-mono text-xl font-bold text-emerald-600 tracking-wider">
+                                    <p class="font-mono text-xl font-bold text-emerald-600 tracking-wider break-all">
                                         {{ livePreview }}
                                     </p>
                                     <p class="text-[9px] text-gray-400 mt-2 font-bold uppercase tracking-widest">Preview Menggunakan Prefix Default ({{ form.prefix }})</p>
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- Simulasi Subkategori -->
-                            <div class="px-6 py-4 bg-gray-50/50 border-t border-gray-100">
-                                <div class="flex items-center gap-2 mb-3">
+                        <!-- Format Explanation -->
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                            <div class="px-5 py-4 sm:px-6 border-b border-gray-50">
+                                <div class="flex items-center gap-2">
                                     <svg class="h-3.5 w-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                    <span class="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Penjelasan Format</span>
+                                    <span class="text-xs font-bold text-gray-700">Penjelasan Format</span>
                                 </div>
-                                <div class="space-y-3">
-                                    <div class="flex items-start gap-3">
-                                        <div class="h-5 w-5 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold shrink-0">1</div>
-                                        <p class="text-[11px] text-gray-500 leading-relaxed"><b class="text-gray-700">Prefix Subkategori</b>: Diambil dari field "Kode / Prefix" di menu Kategori. (Contoh: LAPTOP, AC, MTR)</p>
-                                    </div>
-                                    <div class="flex items-start gap-3">
-                                        <div class="h-5 w-5 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold shrink-0">2</div>
-                                        <p class="text-[11px] text-gray-500 leading-relaxed"><b class="text-gray-700">Nomor Urut</b>: Otomatis bertambah +1 per masing-masing prefix subkategori secara global.</p>
-                                    </div>
-                                    <div class="flex items-start gap-3">
-                                        <div class="h-5 w-5 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold shrink-0">3</div>
-                                        <p class="text-[11px] text-gray-500 leading-relaxed"><b class="text-gray-700">Departemen, Bulan & Tahun</b>: Diambil dinamis dari input form asset (Dept, Tgl Beli).</p>
-                                    </div>
+                            </div>
+                            <div class="p-5 sm:p-6 space-y-3">
+                                <div class="flex items-start gap-3">
+                                    <div class="h-6 w-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</div>
+                                    <p class="text-xs text-gray-500 leading-relaxed"><b class="text-gray-700">Prefix Subkategori</b>: Diambil dari field "Kode / Prefix" di menu Kategori. (Contoh: LAPTOP, AC, MTR)</p>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <div class="h-6 w-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">2</div>
+                                    <p class="text-xs text-gray-500 leading-relaxed"><b class="text-gray-700">Nomor Urut</b>: Otomatis bertambah +1 per masing-masing prefix subkategori secara global.</p>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <div class="h-6 w-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">3</div>
+                                    <p class="text-xs text-gray-500 leading-relaxed"><b class="text-gray-700">Departemen, Bulan &amp; Tahun</b>: Diambil dinamis dari input form asset (Dept, Tgl Beli).</p>
                                 </div>
                                 <div class="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-lg">
                                     <p class="text-[10px] text-amber-700 leading-relaxed font-medium">
-                                        <b>Pro Tip:</b> Jika Anda ingin nomor urut dengan nol di depan (misal: 001), silakan atur "Jumlah Digit Nomor Urut" di samping menjadi lebih dari 1.
+                                        <b>Pro Tip:</b> Jika Anda ingin nomor urut dengan nol di depan (misal: 001), silakan atur "Jumlah Digit Nomor Urut" menjadi lebih dari 1.
                                     </p>
                                 </div>
                             </div>
@@ -292,10 +313,10 @@ const labelClass = 'block text-[10px] font-bold text-gray-500 uppercase tracking
 
                         <!-- Sample Codes -->
                         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                            <div class="px-6 py-4 border-b border-gray-100">
+                            <div class="px-5 py-4 sm:px-6 border-b border-gray-100">
                                 <h3 class="text-sm font-bold text-gray-800">Contoh Urutan</h3>
                             </div>
-                            <div class="p-4">
+                            <div class="p-4 sm:p-5">
                                 <div class="space-y-1.5">
                                     <div v-for="(code, i) in sampleCodes" :key="i"
                                         class="flex items-center justify-between px-4 py-2.5 rounded-lg"
@@ -303,7 +324,7 @@ const labelClass = 'block text-[10px] font-bold text-gray-500 uppercase tracking
                                         <span class="text-[10px] font-bold text-gray-400 uppercase">
                                             {{ i === 0 ? '#1' : i === 1 ? '#2' : i === 2 ? '#3' : i === 3 ? '#50' : '#100' }}
                                         </span>
-                                        <span class="font-mono text-xs font-bold" :class="i === 0 ? 'text-emerald-700' : 'text-gray-700'">
+                                        <span class="font-mono text-xs font-bold break-all text-right" :class="i === 0 ? 'text-emerald-700' : 'text-gray-700'">
                                             {{ code }}
                                         </span>
                                     </div>

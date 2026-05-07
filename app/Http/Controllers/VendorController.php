@@ -5,18 +5,47 @@ namespace App\Http\Controllers;
 use App\Models\Vendor;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class VendorController extends Controller
+class VendorController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('can:view database', only: ['index']),
+            new Middleware('can:create database', only: ['store']),
+            new Middleware('can:edit database', only: ['update']),
+            new Middleware('can:delete database', only: ['destroy', 'bulkDelete']),
+        ];
+    }
     /**
      * Display a listing of vendors.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $vendors = Vendor::orderBy('name')->get();
+        $perPage = $request->input('per_page', 10);
+        $limit = $perPage === 'all' ? 9999 : $perPage;
+
+        $query = Vendor::withCount('assets');
+        
+        if ($request->filled('search')) {
+            $query->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhere('contact_person', 'like', '%' . $request->search . '%')
+                  ->orWhere('email', 'like', '%' . $request->search . '%')
+                  ->orWhere('address', 'like', '%' . $request->search . '%');
+        }
+
+        $sortCol = $request->input('sort', 'name');
+        $sortDir = $request->input('dir', 'asc');
+
+        $vendors = $query->orderBy($sortCol, $sortDir)
+            ->paginate($limit)
+            ->withQueryString();
 
         return Inertia::render('Vendors/Index', [
-            'vendors' => $vendors,
+            'vendors' => fn() => $vendors,
+            'filters' => $request->only(['search', 'per_page', 'sort', 'dir']),
         ]);
     }
 
@@ -74,5 +103,18 @@ class VendorController extends Controller
 
         return redirect()->route('vendors.index')
             ->with('success', 'Vendor berhasil dihapus.');
+    }
+
+    /**
+     * Remove multiple vendors.
+     */
+    public function bulkDelete(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        if (empty($ids)) return back();
+
+        Vendor::whereIn('id', $ids)->delete();
+
+        return back()->with('success', count($ids) . ' Vendor berhasil dihapus secara massal.');
     }
 }

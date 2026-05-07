@@ -8,9 +8,20 @@ use App\Models\AssetMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class MaintenanceLogController extends Controller
+class MaintenanceLogController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('can:view activity', only: ['index']),
+            new Middleware('can:create activity', only: ['store']),
+            new Middleware('can:edit activity', only: ['update', 'complete']),
+            new Middleware('can:delete activity', only: ['destroy', 'bulkDelete']),
+        ];
+    }
     /**
      * Display a listing of maintenance logs.
      */

@@ -21,10 +21,6 @@ return new class extends Migration
             $user->text('description')->nullable();
             $user->timestamps();
         });
-
-        Schema::table('assets', function (Blueprint $table) {
-            $table->foreignId('vendor_id')->nullable()->after('department_id')->constrained('vendors')->nullOnDelete();
-        });
     }
 
     /**
@@ -32,10 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('assets', function (Blueprint $table) {
-            $table->dropForeign(['vendor_id']);
-            $table->dropColumn('vendor_id');
-        });
         Schema::dropIfExists('vendors');
     }
 };

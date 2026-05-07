@@ -6,12 +6,36 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '');
     const isProduction = mode === 'production';
-    const appUrl = isProduction ? 'https://ga.interprima.co.id' : 'http://localhost';
+    const appUrl = isProduction ? 'https://ga.interprima.co.id' : 'http://192.168.0.11:8085';
 
     return {
         // base: isProduction ? '/build/' : '/', // Tetap pertahankan ini
 
         plugins: [
+            VitePWA({
+                registerType: 'autoUpdate',
+                injectRegister: false,
+                manifest: {
+                    name: 'Inventory Interprima',
+                    short_name: 'Inventory',
+                    description: 'Sistem Manajemen Aset & Inventaris Interprima',
+                    theme_color: '#059669',
+                    background_color: '#ffffff',
+                    display: 'standalone',
+                    icons: [
+                        {
+                            src: '/icons/logo.png',
+                            sizes: '192x192',
+                            type: 'image/png'
+                        },
+                        {
+                            src: '/icons/logo.png',
+                            sizes: '512x512',
+                            type: 'image/png'
+                        }
+                    ]
+                }
+            }),
             laravel({
                 input: 'resources/js/app.js',
                 refresh: !isProduction,
@@ -24,61 +48,18 @@ export default defineConfig(({ mode }) => {
                     },
                 },
             }),
-            VitePWA({
-                registerType: 'autoUpdate',
-                injectRegister: 'auto',
-                base: '/',
-                devOptions: {
-                    enabled: false  // PWA hanya aktif di production build
-                },
-                workbox: {
-                    // TAMBAHKAN INI: Mengatasi error "non-precached-url"
-                    navigateFallback: '/',
-                    navigateFallbackAllowlist: [/^(?!\/__).*/],
-
-                    cleanupOutdatedCaches: true,
-                    globPatterns: ['**/*.{js,css,html,ico,png,svg,json,woff2}'],
-                    skipWaiting: isProduction,
-                    clientsClaim: isProduction,
-                },
-                manifest: {
-                    name: 'Planly App',
-                    short_name: 'PlanlyApp',
-                    description: 'Planning and Monitoring Application',
-                    theme_color: '#2563eb',
-                    background_color: '#ffffff',
-                    display: 'standalone',
-                    orientation: 'portrait',
-                    start_url: '/',
-                    scope: '/',
-                    icons: [
-                        {
-                            src: '/logo/logo.png',
-                            sizes: '192x192',
-                            type: 'image/png',
-                            purpose: 'any maskable'
-                        },
-                        {
-                            src: '/logo/logo.png',
-                            sizes: '512x512',
-                            type: 'image/png',
-                            purpose: 'any maskable'
-                        }
-                    ]
-                }
-            })
         ],
 
         build: {
             outDir: 'public/build',
             minify: isProduction ? 'terser' : false,
             rollupOptions: {
-                output: {
-                    manualChunks: {
-                        vendor: ['vue', '@inertiajs/vue3', 'axios'],
-                        ui: ['@headlessui/vue', 'sweetalert2'],
-                    },
-                },
+                // output: {
+                //     manualChunks: {
+                //         vendor: ['vue', '@inertiajs/vue3', 'axios'],
+                //         ui: ['@headlessui/vue', 'sweetalert2'],
+                //     },
+                // },
             },
             sourcemap: !isProduction,
             chunkSizeWarningLimit: 1000,
@@ -86,7 +67,7 @@ export default defineConfig(({ mode }) => {
 
         server: {
             host: '0.0.0.0',
-            port: 5174,
+            port: 5175,
             hmr: {
                 host: isProduction ? 'ga.interprima.co.id' : 'localhost',
                 protocol: isProduction ? 'wss' : 'ws',

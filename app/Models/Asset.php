@@ -8,9 +8,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+use App\Traits\LogsActivity;
+
 class Asset extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, LogsActivity;
 
     protected $fillable = [
         'asset_code',
@@ -20,6 +22,9 @@ class Asset extends Model
         'brand',
         'model_type',
         'serial_number',
+        'license_key',
+        'license_type',
+        'license_expiration_date',
         'specification',
         'condition',
         'barcode_code',
@@ -32,6 +37,8 @@ class Asset extends Model
         'photo',
         'purchase_date',
         'purchase_price',
+        'salvage_value',
+        'useful_life',
         'vendor',
         'warranty_date',
         'usage_period',
@@ -45,8 +52,46 @@ class Asset extends Model
             'purchase_date' => 'date',
             'warranty_date' => 'date',
             'purchase_price' => 'decimal:2',
+            'salvage_value' => 'decimal:2',
+            'useful_life' => 'integer',
+            'license_expiration_date' => 'date',
         ];
     }
+
+    /**
+     * Calculate current book value using Straight-Line Depreciation
+     */
+    public function getCurrentBookValueAttribute(): float
+    {
+        if (!$this->purchase_price || !$this->purchase_date || $this->useful_life <= 0) {
+            return (float) ($this->purchase_price ?? 0);
+        }
+
+        $purchaseDate = \Carbon\Carbon::parse($this->purchase_date);
+        $now = now();
+        
+        // Calculate age in years (with decimal for precision)
+        $ageInYears = $purchaseDate->diffInDays($now) / 365.25;
+
+        if ($ageInYears <= 0) {
+            return (float) $this->purchase_price;
+        }
+
+        if ($ageInYears >= $this->useful_life) {
+            return (float) $this->salvage_value;
+        }
+
+        // Straight-Line Formula: 
+        // Annual Depreciation = (Purchase Price - Salvage Value) / Useful Life
+        $annualDepreciation = ($this->purchase_price - $this->salvage_value) / $this->useful_life;
+        $accumulatedDepreciation = $annualDepreciation * $ageInYears;
+
+        $bookValue = $this->purchase_price - $accumulatedDepreciation;
+
+        return (float) max($bookValue, $this->salvage_value);
+    }
+
+    protected $appends = ['current_book_value'];
 
     /**
      * Generate a unique asset code using the concept:
@@ -168,5 +213,15 @@ class Asset extends Model
     public function vendor_rel(): BelongsTo
     {
         return $this->belongsTo(Vendor::class, 'vendor_id');
+    }
+
+    public function loans(): HasMany
+    {
+        return $this->hasMany(AssetLoan::class)->orderByDesc('loan_date');
+    }
+
+    public function auditItems(): HasMany
+    {
+        return $this->hasMany(AuditItem::class);
     }
 }

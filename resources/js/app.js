@@ -1,5 +1,10 @@
 import '../css/app.css';
 import './bootstrap';
+import { registerSW } from 'virtual:pwa-register';
+
+if ('serviceWorker' in navigator) {
+    registerSW({ immediate: true });
+}
 
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';

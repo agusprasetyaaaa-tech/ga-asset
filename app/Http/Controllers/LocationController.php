@@ -5,18 +5,45 @@ namespace App\Http\Controllers;
 use App\Models\Location;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class LocationController extends Controller
+class LocationController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('can:view database', only: ['index']),
+            new Middleware('can:create database', only: ['store']),
+            new Middleware('can:edit database', only: ['update']),
+            new Middleware('can:delete database', only: ['destroy', 'bulkDelete']),
+        ];
+    }
     /**
      * Display a listing of locations.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $locations = Location::withCount('assets')->orderBy('name')->get();
+        $perPage = $request->input('per_page', 10);
+        $limit = $perPage === 'all' ? 9999 : $perPage;
+
+        $query = Location::withCount('assets');
+        
+        if ($request->filled('search')) {
+            $query->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhere('description', 'like', '%' . $request->search . '%');
+        }
+
+        $sortCol = $request->input('sort', 'name');
+        $sortDir = $request->input('dir', 'asc');
+
+        $locations = $query->orderBy($sortCol, $sortDir)
+            ->paginate($limit)
+            ->withQueryString();
 
         return Inertia::render('Locations/Index', [
-            'locations' => $locations,
+            'locations' => fn() => $locations,
+            'filters' => $request->only(['search', 'per_page', 'sort', 'dir']),
         ]);
     }
 
@@ -61,5 +88,18 @@ class LocationController extends Controller
 
         return redirect()->route('locations.index')
             ->with('success', 'Lokasi berhasil dihapus.');
+    }
+
+    /**
+     * Remove multiple locations.
+     */
+    public function bulkDelete(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        if (empty($ids)) return back();
+
+        Location::whereIn('id', $ids)->delete();
+
+        return back()->with('success', count($ids) . ' Lokasi berhasil dihapus secara massal.');
     }
 }

@@ -5,9 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\AssetCodeSetting;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class AssetCodeSettingController extends Controller
+class AssetCodeSettingController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('role:admin'),
+        ];
+    }
     public function index()
     {
         $setting = AssetCodeSetting::getSetting();

@@ -8,9 +8,21 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class CategoryController extends Controller
+class CategoryController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('can:view database', only: ['index']),
+            new Middleware('can:create database', only: ['store', 'storeSubcategory']),
+            new Middleware('can:edit database', only: ['update', 'updateSubcategory']),
+            new Middleware('can:delete database', only: ['destroy', 'destroySubcategory', 'bulkDelete', 'bulkDeleteSub']),
+        ];
+    }
+
     /**
      * Display a listing of categories and subcategories.
      */

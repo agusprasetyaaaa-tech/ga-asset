@@ -204,7 +204,7 @@ class AssetController extends Controller implements HasMiddleware
 
     public function show(Asset $asset)
     {
-        $asset->load(['location', 'subcategory.category', 'movements.user', 'maintenanceLogs.user', 'department_rel']);
+        $asset->load(['location', 'subcategory.category', 'movements.user', 'maintenanceLogs.user', 'department_rel', 'vendor_rel']);
         return Inertia::render('Assets/Show', [
             'asset' => $asset,
             'locations' => \App\Models\Location::all(),

@@ -263,7 +263,7 @@ const conditionColor = (c) => {
                             </div>
 
                             <!-- Procurement Info -->
-                            <div v-if="asset.vendor || asset.warranty_date || asset.notes" class="mt-6 pt-4 border-t border-gray-100">
+                            <div v-if="asset.vendor || asset.vendor_rel || asset.warranty_date || asset.notes" class="mt-6 pt-4 border-t border-gray-100">
                                 <span class="text-xs font-bold text-gray-800 uppercase tracking-widest block mb-4">Informasi Pembelian (Procurement)</span>
                                 <div class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4">
                                     <div class="flex flex-col">
